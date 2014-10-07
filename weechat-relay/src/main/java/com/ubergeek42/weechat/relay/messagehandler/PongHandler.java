@@ -46,7 +46,7 @@ public class PongHandler implements RelayMessageHandler {
 
     synchronized public void waitForPong(long ping) throws InterruptedException {
         if (DEBUG) logger.debug("waitForPong ping: " + ping);
-        long timeout = ping + 60 * 1000;
+        long timeout = ping + conn.pingTimeout();
         long lastPong = this.lastPong;
         while (lastPong != ping && System.currentTimeMillis() < timeout) {
             wait(timeout - System.currentTimeMillis());

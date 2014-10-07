@@ -220,13 +220,17 @@ public class RelayConnection implements RelayConnectionHandler {
 
     private Thread pingWriter = new Thread(new Runnable() {
         public void run() {
+            if (!conn.pingEnabled()) {
+                return;
+            }
+
             while(isConnected()) {
                 try {
                     long now = System.currentTimeMillis();
                     sendMsg(null, "ping", String.valueOf(now));
                     pongHandler.waitForPong(now);
-                    Thread.sleep(60 * 1000);
-
+                    if (System.currentTimeMillis() < now + conn.pingTimeout())
+                        Thread.sleep(now + conn.pingTimeout() - System.currentTimeMillis());
                 } catch (InterruptedException e) {
                     break;
                 }

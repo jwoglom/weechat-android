@@ -15,15 +15,6 @@
  ******************************************************************************/
 package com.ubergeek42.WeechatAndroid.service;
 
-import java.io.File;
-import java.security.cert.X509Certificate;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -65,6 +56,15 @@ import com.ubergeek42.weechat.relay.messagehandler.UpgradeHandler;
 import com.ubergeek42.weechat.relay.messagehandler.UpgradeObserver;
 import com.ubergeek42.weechat.relay.protocol.RelayObject;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.security.cert.X509Certificate;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 public abstract class RelayServiceBackbone extends Service implements RelayConnectionHandler,
         OnSharedPreferenceChangeListener, UpgradeObserver {
 
@@ -83,6 +83,9 @@ public abstract class RelayServiceBackbone extends Service implements RelayConne
     final static private String PREF_HOST = "host";
     final static private String PREF_PASSWORD = "password";
     final static private String PREF_PORT = "port";
+
+    final static private String PREF_PING_ENABLED = "ping_enabled";
+    final static private String PREF_PING_TIMEOUT = "ping_timeout";
 
     final static private String PREF_STUNNEL_CERT = "stunnel_cert";
     final static private String PREF_STUNNEL_PASS = "stunnel_pass";
@@ -479,6 +482,8 @@ public abstract class RelayServiceBackbone extends Service implements RelayConne
         } else {
             conn = new PlainConnection(host, port);
         }
+        conn.enablePing(prefs.getBoolean(PREF_PING_ENABLED, true));
+        conn.setPingTimeout(Integer.parseInt(prefs.getString(PREF_PING_TIMEOUT, "60")));
         conn.addConnectionHandler(this);
         connection = new RelayConnection(conn, pass);
         connection.connect();

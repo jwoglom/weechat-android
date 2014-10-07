@@ -27,4 +27,12 @@ public interface IConnection {
     void notifyHandlersOfError(Exception e);
 
     void notifyHandlers(STATE s);
+
+    public void enablePing(boolean enabled);
+
+    public boolean pingEnabled();
+
+    public void setPingTimeout(int pingTimeout);
+
+    public long pingTimeout();
 }

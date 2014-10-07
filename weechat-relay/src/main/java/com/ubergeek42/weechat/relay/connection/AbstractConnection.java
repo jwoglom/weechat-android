@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.net.SocketException;
 import java.util.ArrayList;
 
 public abstract class AbstractConnection implements IConnection {
@@ -19,6 +18,9 @@ public abstract class AbstractConnection implements IConnection {
     String server = null;
     int port = 0;
 
+    boolean pingEnabled = false;
+    int pingTimeout = 0;
+
     Socket sock = null;
     OutputStream out_stream = null;
     InputStream in_stream = null;
@@ -26,6 +28,26 @@ public abstract class AbstractConnection implements IConnection {
 
     ArrayList<RelayConnectionHandler> connectionHandlers = new ArrayList<RelayConnectionHandler>();
     Thread connector = null;
+
+    @Override
+    public void enablePing(boolean enabled) {
+        this.pingEnabled = enabled;
+    }
+
+    @Override
+    public boolean pingEnabled() {
+        return this.pingEnabled;
+    }
+
+    @Override
+    public void setPingTimeout(int timeout) {
+        this.pingTimeout = timeout;
+    }
+
+    @Override
+    public long pingTimeout() {
+        return this.pingTimeout * 1000;
+    }
 
     @Override
     public boolean isConnected() {

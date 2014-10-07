@@ -38,6 +38,7 @@ public class WeechatPreferencesActivity extends PreferenceActivity implements
     private EditTextPreference sshPassPref;
     private EditTextPreference sshUserPref;
     private EditTextPreference sshKeyFilePref;
+    private EditTextPreference pingTimeoutPref;
     private ListPreference prefixPref;
     private ListPreference connectionTypePref;
 
@@ -62,6 +63,8 @@ public class WeechatPreferencesActivity extends PreferenceActivity implements
         sshPortPref = (EditTextPreference) getPreferenceScreen().findPreference("ssh_port");
         sshPassPref = (EditTextPreference) getPreferenceScreen().findPreference("ssh_pass");
         sshKeyFilePref = (EditTextPreference) getPreferenceScreen().findPreference("ssh_keyfile");
+
+        pingTimeoutPref = (EditTextPreference) getPreferenceScreen().findPreference("ping_timeout");
 
         prefixPref = (ListPreference) getPreferenceScreen().findPreference("prefix_align");
         connectionTypePref = (ListPreference) getPreferenceScreen().findPreference("connection_type");
@@ -90,6 +93,8 @@ public class WeechatPreferencesActivity extends PreferenceActivity implements
         sshUserPref.setSummary(sharedPreferences.getString("ssh_user", ""));
         sshPortPref.setSummary(sharedPreferences.getString("ssh_port", "22"));
         sshKeyFilePref.setSummary(sharedPreferences.getString("ssh_keyfile", "Not Set"));
+
+        pingTimeoutPref.setSummary(sharedPreferences.getString("ping_timeout", "60"));
 
         prefixPref.setSummary(prefixPref.getEntry());
         connectionTypePref.setSummary(connectionTypePref.getEntry());
@@ -157,6 +162,8 @@ public class WeechatPreferencesActivity extends PreferenceActivity implements
             }
         } else if (key.equals("ssh_keyfile")) {
             sshKeyFilePref.setSummary(sharedPreferences.getString(key, "/sdcard/weechat/sshkey.id_rsa"));
+        } else if (key.equals("ping_timeout")) {
+            pingTimeoutPref.setSummary(sharedPreferences.getString("ping_timeout", "60"));
         } else if (key.equals("prefix_align")) {
             prefixPref.setSummary(prefixPref.getEntry());
         } else if (key.equals("connection_type")) {

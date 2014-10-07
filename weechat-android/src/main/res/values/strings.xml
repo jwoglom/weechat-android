@@ -71,6 +71,10 @@
 		    <string name="pref_ssh_port">SSH port</string>
 		    <string name="pref_ssh_pass">SSH password/key passphrase</string>
 		    <string name="pref_ssh_keyfile">SSH private key file</string>
+	    <string name="pref_ping_group">Ping settings</string>
+		    <string name="pref_ping_enabled">Enable Ping</string>
+		    <string name="pref_ping_timeout">Timeout</string>
+		    <string name="pref_ping_timeout_summary">Number of seconds after which ping is considered dropped</string>
     <string name="pref_bufferlist_group">Buffer list settings</string>
 	    <string name="pref_sort_buffers">Sort buffer list</string>
 	    <string name="pref_sort_buffers_summary">Sort by number of highlights/private messages/unread messages</string>
