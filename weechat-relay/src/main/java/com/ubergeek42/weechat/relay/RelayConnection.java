@@ -18,6 +18,7 @@ package com.ubergeek42.weechat.relay;
 import com.ubergeek42.weechat.Helper;
 import com.ubergeek42.weechat.relay.connection.IConnection;
 import com.ubergeek42.weechat.relay.messagehandler.LoginHandler;
+import com.ubergeek42.weechat.relay.messagehandler.PongHandler;
 import com.ubergeek42.weechat.relay.protocol.Data;
 import com.ubergeek42.weechat.relay.protocol.RelayObject;
 
@@ -44,6 +45,7 @@ public class RelayConnection implements RelayConnectionHandler {
 
     IConnection conn;
     LinkedBlockingQueue<String> outbox = new LinkedBlockingQueue<String>();
+    PongHandler pongHandler;
 
     /**
      * Sets up a connection to a weechat relay server
@@ -60,6 +62,9 @@ public class RelayConnection implements RelayConnectionHandler {
         //       after some set amount of time
         LoginHandler loginHandler = new LoginHandler(conn);
         addHandler("checklogin", loginHandler);
+
+        pongHandler = new PongHandler(conn);
+        addHandler("_pong", pongHandler);
 
         conn.addConnectionHandler(this);
     }
@@ -129,6 +134,7 @@ public class RelayConnection implements RelayConnectionHandler {
     private void postConnectionSetup() {
         sendMsg(null, "init", "password=" + password + ",compression=zlib");
         sendMsg("checklogin", "info", "version");
+        pingWriter.start();
 
         socketReader.start();
         socketWriter.start();
@@ -209,6 +215,22 @@ public class RelayConnection implements RelayConnectionHandler {
             }
             if (DEBUG) logger.debug("socketReader: disconnected, thread stopping");
             conn.disconnect();
+        }
+    });
+
+    private Thread pingWriter = new Thread(new Runnable() {
+        public void run() {
+            while(isConnected()) {
+                try {
+                    long now = System.currentTimeMillis();
+                    sendMsg(null, "ping", String.valueOf(now));
+                    pongHandler.waitForPong(now);
+                    Thread.sleep(60 * 1000);
+
+                } catch (InterruptedException e) {
+                    break;
+                }
+            }
         }
     });
 
