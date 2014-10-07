@@ -224,13 +224,22 @@ public class RelayConnection implements RelayConnectionHandler {
                 return;
             }
 
+            if (DEBUG) logger.debug("pingWriter: ping enabled, timeout " + conn.pingTimeout());
+            long nextPing = System.currentTimeMillis() + conn.pingTimeout();
             while(isConnected()) {
                 try {
-                    long now = System.currentTimeMillis();
-                    sendMsg(null, "ping", String.valueOf(now));
-                    pongHandler.waitForPong(now);
-                    if (System.currentTimeMillis() < now + conn.pingTimeout())
-                        Thread.sleep(now + conn.pingTimeout() - System.currentTimeMillis());
+                    long currentTime = System.currentTimeMillis();
+
+                    if (currentTime < nextPing) {
+                        long naptime = nextPing - currentTime;
+                        if (DEBUG) logger.debug("pingWriter: sleeping for " + naptime + " millis");
+                        Thread.sleep(naptime);
+                    }
+
+                    sendMsg(null, "ping", String.valueOf(nextPing));
+                    pongHandler.waitForPong(nextPing);
+
+                    nextPing += conn.pingTimeout();
                 } catch (InterruptedException e) {
                     break;
                 }
