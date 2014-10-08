@@ -96,6 +96,7 @@ public class RelayConnection implements RelayConnectionHandler {
      * Disconnect from the server.
      */
     public void disconnect() {
+        pingWriter.interrupt();
         conn.disconnect();
         socketReader.interrupt();
         socketWriter.interrupt();
@@ -252,6 +253,7 @@ public class RelayConnection implements RelayConnectionHandler {
                     break;
                 }
             }
+            if (DEBUG) logger.debug("pingWriter: disconnected, thread stopping");
         }
     });
 
