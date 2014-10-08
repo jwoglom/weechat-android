@@ -17,6 +17,7 @@ package com.ubergeek42.weechat.relay;
 
 import com.ubergeek42.weechat.Helper;
 import com.ubergeek42.weechat.relay.connection.IConnection;
+import com.ubergeek42.weechat.relay.messagehandler.LastMessageHandler;
 import com.ubergeek42.weechat.relay.messagehandler.LoginHandler;
 import com.ubergeek42.weechat.relay.messagehandler.PongHandler;
 import com.ubergeek42.weechat.relay.protocol.Data;
@@ -46,6 +47,7 @@ public class RelayConnection implements RelayConnectionHandler {
     IConnection conn;
     LinkedBlockingQueue<String> outbox = new LinkedBlockingQueue<String>();
     PongHandler pongHandler;
+    LastMessageHandler lastMessageHandler;
 
     /**
      * Sets up a connection to a weechat relay server
@@ -65,6 +67,9 @@ public class RelayConnection implements RelayConnectionHandler {
 
         pongHandler = new PongHandler(conn);
         addHandler("_pong", pongHandler);
+
+        lastMessageHandler = new LastMessageHandler();
+        addHandler("*", lastMessageHandler);
 
         conn.addConnectionHandler(this);
     }
@@ -236,8 +241,11 @@ public class RelayConnection implements RelayConnectionHandler {
                         Thread.sleep(naptime);
                     }
 
-                    sendMsg(null, "ping", String.valueOf(nextPing));
-                    pongHandler.waitForPong(nextPing);
+                    if (lastMessageHandler.lastMessageReceivedAt() < currentTime) {
+                        if (DEBUG) logger.debug("pingWriter: last message too old, sending ping");
+                        sendMsg(null, "ping", String.valueOf(nextPing));
+                        pongHandler.waitForPong(nextPing);
+                    }
 
                     nextPing += conn.pingTimeout();
                 } catch (InterruptedException e) {
@@ -275,6 +283,7 @@ public class RelayConnection implements RelayConnectionHandler {
         if (DEBUG) logger.debug("handling message {}", id);
         if (messageHandlers.containsKey(id)) {
             HashSet<RelayMessageHandler> handlers = messageHandlers.get(id);
+            handlers.addAll(messageHandlers.get("*"));
             for (RelayMessageHandler rmh : handlers) {
                 if (msg.getObjects().length == 0) {
                     rmh.handleMessage(null, id);
