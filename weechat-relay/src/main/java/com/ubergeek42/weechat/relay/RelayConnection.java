@@ -30,7 +30,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Class to provide and manage a connection to a weechat relay server
@@ -43,6 +46,7 @@ public class RelayConnection implements RelayConnectionHandler {
     private String password;
 
     private HashMap<String, LinkedHashSet<RelayMessageHandler>> messageHandlers = new  HashMap<String, LinkedHashSet<RelayMessageHandler>>();
+    private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     IConnection conn;
     LinkedBlockingQueue<String> outbox = new LinkedBlockingQueue<String>();
@@ -96,7 +100,7 @@ public class RelayConnection implements RelayConnectionHandler {
      * Disconnect from the server.
      */
     public void disconnect() {
-        pingWriter.interrupt();
+        scheduler.shutdownNow();
         conn.disconnect();
         socketReader.interrupt();
         socketWriter.interrupt();
@@ -140,10 +144,14 @@ public class RelayConnection implements RelayConnectionHandler {
     private void postConnectionSetup() {
         sendMsg(null, "init", "password=" + password + ",compression=zlib");
         sendMsg("checklogin", "info", "version");
-        pingWriter.start();
 
         socketReader.start();
         socketWriter.start();
+
+        if (conn.pingEnabled()) {
+            long timeout = conn.pingTimeout();
+            scheduler.scheduleAtFixedRate(pingRunner, timeout, timeout, TimeUnit.MILLISECONDS);
+        }
     }
 
     private Thread socketWriter = new Thread(new Runnable() {
@@ -224,38 +232,26 @@ public class RelayConnection implements RelayConnectionHandler {
         }
     });
 
-    private Thread pingWriter = new Thread(new Runnable() {
+    private Runnable pingRunner = new Runnable() {
+        long lastPing = 0;
+
+        @Override
         public void run() {
-            if (!conn.pingEnabled()) {
-                return;
-            }
+            try {
+                long currentTime = System.currentTimeMillis();
 
-            if (DEBUG) logger.debug("pingWriter: ping enabled, timeout " + conn.pingTimeout());
-            long nextPing = System.currentTimeMillis() + conn.pingTimeout();
-            while(isConnected()) {
-                try {
-                    long currentTime = System.currentTimeMillis();
-
-                    if (currentTime < nextPing) {
-                        long naptime = nextPing - currentTime;
-                        if (DEBUG) logger.debug("pingWriter: sleeping for " + naptime + " millis");
-                        Thread.sleep(naptime);
-                    }
-
-                    if (lastMessageHandler.lastMessageReceivedAt() < currentTime) {
-                        if (DEBUG) logger.debug("pingWriter: last message too old, sending ping");
-                        sendMsg(null, "ping", String.valueOf(nextPing));
-                        pongHandler.waitForPong(nextPing);
-                    }
-
-                    nextPing += conn.pingTimeout();
-                } catch (InterruptedException e) {
-                    break;
+                if (lastMessageHandler.lastMessageReceivedAt() <= lastPing) {
+                    if (DEBUG) logger.debug("pingWriter: last message too old, sending ping");
+                    sendMsg(null, "ping", String.valueOf(currentTime));
+                    pongHandler.waitForPong(currentTime);
                 }
+
+                lastPing = System.currentTimeMillis();
+            } catch (InterruptedException e) {
+                if (DEBUG) logger.debug("pingWriter: interrupted, shutting down");
             }
-            if (DEBUG) logger.debug("pingWriter: disconnected, thread stopping");
         }
-    });
+    };
 
     /**
      * Registers a handler to be called whenever a message is received
@@ -324,6 +320,7 @@ public class RelayConnection implements RelayConnectionHandler {
     public void onDisconnect() {
         if (DEBUG) logger.debug("onDisconnect()");
 
+        scheduler.shutdown();
         socketReader.interrupt();
         socketWriter.interrupt();
     }
